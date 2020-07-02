@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>wonderland</title>
+  
+  
+  <link href="/atom.xml" rel="self"/>
+  
+  <link href="http://yoursite.com/"/>
+  <updated>2020-07-02T11:09:41.030Z</updated>
+  <id>http://yoursite.com/</id>
+  
+  <author>
+    <name>xlydsginwonderland</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>树莓派做的远程服务器监控</title>
+    <link href="http://yoursite.com/2020/04/30/%E6%A0%91%E8%8E%93%E6%B4%BE%E5%81%9A%E7%9A%84%E8%BF%9C%E7%A8%8B%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9B%91%E6%8E%A7/"/>
+    <id>http://yoursite.com/2020/04/30/%E6%A0%91%E8%8E%93%E6%B4%BE%E5%81%9A%E7%9A%84%E8%BF%9C%E7%A8%8B%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9B%91%E6%8E%A7/</id>
+    <published>2020-04-30T14:41:53.000Z</published>
+    <updated>2020-07-02T11:09:41.030Z</updated>
+    
+    <content type="html"><![CDATA[<p>&emsp;&emsp;放在学校的台式机突然就连不上了，救是没法救了，刚好手头有一个在做软路由的树莓派，拿来开个刀试着做一个服务器监控/控制设备用。用到的工具主要有：树莓派4B，USB-HDMI采集卡，串口转USB-HID模块。具体工程见文末。<br>&emsp;&emsp;当然市场上有类似的东西：向日葵控控a2，如果有钱直接买那肯定是最佳解决方案。而且如果对性能要求不高的话，可以试试玩玩FriendlyElec的ZeroPi，千兆口+USB2.0+串口，刚刚好不多不少。</p><a id="more"></a><h2 id="搭架构"><a href="#搭架构" class="headerlink" title="搭架构"></a>搭架构</h2><p>&emsp;&emsp;树莓派连接网络做处理，装上raspbian之后，只需要实现远程连接、音视频采集和控制输出就行。网络用板载2.4GWiFi连接就行，如果有需求也可以通过4G/5G联网。</p><h4 id="远程连接"><a href="#远程连接" class="headerlink" title="远程连接"></a>远程连接</h4><p>&emsp;&emsp;一方面是实时操控，写轮子是不可能自己写的，这辈子都不可能自己写轮子。刚好常用的<a href="https://www.teamviewer.com/en/download/linux/" target="_blank" rel="noopener">TeamViewer</a>有Raspbian直接可用的Host端，问题解决了。另外Anydesk也有树莓派的Host端，可以作备选。</p><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/teamviewer.webp" alt="TV效果"></p><p>&emsp;&emsp;另一方面是常备监控，用直播推流就行，需要看的时候连上直播间看一眼，找了一圈刚好腾讯云有<a href="https://cloud.tencent.com/product/css" target="_blank" rel="noopener">直播推流服务</a>，在树莓派端抓取视频然后推流就行，还有20GB赠送流量。同样的不可能自己造轮子，找了一圈，开源的<a href="https://obsproject.com/" target="_blank" rel="noopener">Obs Studio</a>刚刚好。</p><p>&emsp;&emsp;obs编译安装好就可以推流了。由于性能和内存限制，如果要整清晰的，可能需要更多swap空间。但是我为了节省流量设定推流码率256kbps，帧率8FPS，好像没什么压力。</p><p>&emsp;&emsp;另外要注意的是在Pi4b上的Raspbian Buster调用OpenGL的时候似乎会尝试Version 1.4，然后就会报错。解决方法是强制Version 3.3运行，可以写个脚本做快速启动。如果想要obs推流高清一点，建议用4g内存版本的树莓派并再开个4g的swap。</p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#! &#x2F;bin&#x2F;bash</span><br><span class="line"></span><br><span class="line">MESA_GL_VERSION_OVERRIDE&#x3D;3.3 obs</span><br><span class="line"></span><br><span class="line">exit 0</span><br></pre></td></tr></table></figure><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/error.webp" alt="报错"></p><center>报错</center><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obs1.webp" alt="直播效果"></p><center>运行投屏测试</center><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obs2.webp" alt="直播效果"></p><center>拉流下来看到的效果</center><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obs3.webp" alt="直播效果"></p><center>拉流下来看到的效果</center><h4 id="音视频采集"><a href="#音视频采集" class="headerlink" title="音视频采集"></a>音视频采集</h4><p>&emsp;&emsp;掏出万能的淘宝闲鱼拼多多，找最便宜的HDMI-USB采集卡，咸鱼62包邮还加一条1.5M的HDMI线，还要什么自行车！垃圾佬走起！虽然上手质量不怎么样，实测输出由于USB2.0的带宽瓶颈，最多720p，30fps，颜色也有很大损失，不过能用就行。</p><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obsCap.webp" alt="obs效果"></p><center>用obs捕捉到的视频流（有声音）</center><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/pyCap.webp" alt="python效果"></p><center>用opencv捕捉到的视频流</center><h4 id="控制"><a href="#控制" class="headerlink" title="控制"></a>控制</h4><p>&emsp;&emsp;既然要远程控制的话，用obs就不太好用了。用python写一个简单的抓取视频流+映射鼠标键盘的功能不难，这里用串口连接到CH9329（频率不高，瞎画能连起来就行），插进电脑直接识别USB-HID设备。采集卡的视频用opencv-python取出来，用pygame写的gui放出来。在pygame里面通过键盘和鼠标相关事件控制CH9329实现键鼠的映射。最终效果，中规中矩。</p><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/pcb.webp" alt="pcb"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/pcbsch.webp" alt="pcbsch"></p><center>瞎画的，用的时候才发现控制口内部自带上拉电阻，那几个跳线点不用接，要是用起来有问题可以改一改退耦电容的位置，用母排针可以直接插在树莓派io上，不想做直接淘宝买模块就行</center><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/tvconnect-1.webp" alt="pcbsch"></p><center>套娃（win10套TV套Raspbian套win10）</center><center>不过控制方面还没加组合键的代码，有时间再弄吧</center><h2 id="实际测试"><a href="#实际测试" class="headerlink" title="实际测试"></a>实际测试</h2><p>&emsp;&emsp;等开学，现在只能祈祷台式机别被老鼠糟蹋了。<br>&emsp;&emsp;[202006更新]原来电脑跪了的原因是便宜货内存走的时候设定了超频忘记降下来了。</p><h2 id="书签"><a href="#书签" class="headerlink" title="书签"></a>书签</h2><blockquote><p>Obs安装方法出处<br><a href="https://obsproject.com/forum/threads/obs-raspberry-pi-build-instructions.115739/" target="_blank" rel="noopener">OBS Raspberry Pi Build Instructions</a><br><a href="https://obsproject.com/forum/threads/failed-to-initialize-video-your-gpu-may-not-be-supported-or-you-graphics-driver-may-need-to-be-updated.115872/#post-437101" target="_blank" rel="noopener">graphics driver problem</a></p></blockquote><blockquote><p>pygame相关资料<br><a href="https://www.pygame.org/docs" target="_blank" rel="noopener">pygame documentation</a><br><a href="https://riptutorial.com/pygame/example/18046/event-loop" target="_blank" rel="noopener">Event loop tutorial</a></p></blockquote><blockquote><p>HID转串口的片子<br><a href="http://www.wch.cn/products/CH9329.html?from=list" target="_blank" rel="noopener">CH9329</a></p></blockquote><blockquote><p>代码的Github仓库<br><a href="https://github.com/xlydsg/RaspberryPiRemoteControl" target="_blank" rel="noopener">RaspberryPiRemoteControl</a></p></blockquote>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&amp;emsp;&amp;emsp;放在学校的台式机突然就连不上了，救是没法救了，刚好手头有一个在做软路由的树莓派，拿来开个刀试着做一个服务器监控/控制设备用。用到的工具主要有：树莓派4B，USB-HDMI采集卡，串口转USB-HID模块。具体工程见文末。&lt;br&gt;&amp;emsp;&amp;emsp;当然市场上有类似的东西：向日葵控控a2，如果有钱直接买那肯定是最佳解决方案。而且如果对性能要求不高的话，可以试试玩玩FriendlyElec的ZeroPi，千兆口+USB2.0+串口，刚刚好不多不少。&lt;/p&gt;
+    
+    </summary>
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>Sparaxis Elegans White</title>
+    <link href="http://yoursite.com/2020/03/08/SparaxisElegansWhite/"/>
+    <id>http://yoursite.com/2020/03/08/SparaxisElegansWhite/</id>
+    <published>2020-03-08T08:07:21.000Z</published>
+    <updated>2020-07-02T10:57:33.604Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="种"><a href="#种" class="headerlink" title="-种-"></a>-种-</h3><p>&emsp;&emsp;18年收到了一批种球，其中有一颗质量很好的大球，白白嫩嫩的，包裹着一层纤维状的种皮。当时还不知道是什么样的植物，但是种下去就知道了。</p><a id="more"></a><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20180820_105353.webp" alt="左上角那个白胖墩儿 IMG_20180820_105353.jpg"></p><h3 id="花"><a href="#花" class="headerlink" title="-花-"></a>-花-</h3><p>&emsp;&emsp;种下去之后就放在了家里，疏于打理，今年开春遇到了不得不呆家里度过三月的情况，才有幸看到它开花。<br>&emsp;&emsp;这个种似乎不常见，外文名<a href="https://en.wikipedia.org/wiki/Sparaxis" target="_blank" rel="noopener">Sparaxis</a> Elegans White，也就是魔杖-白色，鸢尾科(Iridaceae)水仙菖蒲属(Sparaxis)，原产于南非。在潮湿的冬季生长，春季开花，夏季休眠，这一点和酢酱草很类似。<br>&emsp;&emsp;有趣的是，水仙菖蒲属又叫魔杖花，但是其词源又是希腊语<em>sparasso</em>，意为”to convulse, tear”，是从花和花瓣形状来描述的。<br>&emsp;&emsp;同一个大盆里还种了有一些巩根，有些欺负到它了，只有三个花苞。用手机拍了几张照片：</p><p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200307_170421.webp" alt="IMG_20200307_170421.jpg"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200307_170655.webp" alt="IMG_20200307_170655.jpg"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200307_170630.webp" alt="IMG_20200307_170630.jpg"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200307_170713.webp" alt="IMG_20200307_170713.jpg"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200307_171056.webp" alt="IMG_20200307_171056.jpg"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200308_115242.webp" alt="IMG_20200308_115242.jpg"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/SparaxisElegansWhite/IMG_20200308_115303.webp" alt="IMG_20200308_115303.jpg"></p><h3 id="收"><a href="#收" class="headerlink" title="-收-"></a>-收-</h3><p>&emsp;&emsp;等夏天它休眠后，把种球取出来，再种到更舒服的环境里去。</p><h3 id="其他人的记录"><a href="#其他人的记录" class="headerlink" title="-其他人的记录-"></a>-其他人的记录-</h3><blockquote><p>这位就厉害多了😄<br><a href="https://www.bilibili.com/read/cv2845682/" target="_blank" rel="noopener">Bilibili专栏:白雅致魔杖花。【文字版】- vvovvovv</a></p></blockquote><blockquote><p>南非国家生物多样性研究所的资料<br><a href="http://pza.sanbi.org/sparaxis-elegans" target="_blank" rel="noopener">Sparaxis elegans (Sweet) Goldblatt</a></p></blockquote>]]></content>
+    
+    <summary type="html">
+    
+      &lt;h3 id=&quot;种&quot;&gt;&lt;a href=&quot;#种&quot; class=&quot;headerlink&quot; title=&quot;-种-&quot;&gt;&lt;/a&gt;-种-&lt;/h3&gt;&lt;p&gt;&amp;emsp;&amp;emsp;18年收到了一批种球，其中有一颗质量很好的大球，白白嫩嫩的，包裹着一层纤维状的种皮。当时还不知道是什么样的植物，但是种下去就知道了。&lt;/p&gt;
+    
+    </summary>
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>已装备Disqus，请搭配梯子使用</title>
+    <link href="http://yoursite.com/2020/02/29/attention/"/>
+    <id>http://yoursite.com/2020/02/29/attention/</id>
+    <published>2020-02-28T16:00:00.000Z</published>
+    <updated>2020-07-02T10:57:33.604Z</updated>
+    
+    <content type="html"><![CDATA[<h4 id="Disqus评论区在墙外，浏览器科学上网之后可见"><a href="#Disqus评论区在墙外，浏览器科学上网之后可见" class="headerlink" title="Disqus评论区在墙外，浏览器科学上网之后可见"></a>Disqus评论区在墙外，浏览器科学上网之后可见</h4><a id="more"></a>]]></content>
+    
+    <summary type="html">
+    
+      &lt;h4 id=&quot;Disqus评论区在墙外，浏览器科学上网之后可见&quot;&gt;&lt;a href=&quot;#Disqus评论区在墙外，浏览器科学上网之后可见&quot; class=&quot;headerlink&quot; title=&quot;Disqus评论区在墙外，浏览器科学上网之后可见&quot;&gt;&lt;/a&gt;Disqus评论区在墙外，浏览器科学上网之后可见&lt;/h4&gt;
+    
+    </summary>
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>Hello World</title>
+    <link href="http://yoursite.com/2020/02/28/hello-world/"/>
+    <id>http://yoursite.com/2020/02/28/hello-world/</id>
+    <published>2020-02-27T16:00:00.000Z</published>
+    <updated>2020-07-02T11:00:28.754Z</updated>
+    
+    <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p><h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p><h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p><h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p><h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;Welcome to &lt;a href=&quot;https://hexo.io/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Hexo&lt;/a&gt;! This is your very first post. Check &lt;a href=&quot;https://hexo.
+      
+    
+    </summary>
+    
+    
+    
+  </entry>
+  
+</feed>
