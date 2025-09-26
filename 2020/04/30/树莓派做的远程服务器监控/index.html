@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 树莓派做的远程服务器监控 · wonderland</title><meta name="description" content="树莓派做的远程服务器监控 - xlydsginwonderland"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="search" type="application/opensearchdescription+xml" href="http://yoursite.com/atom.xml" title="wonderland"><meta name="generator" content="Hexo 4.2.1"><link rel="alternate" href="/atom.xml" title="wonderland" type="application/atom+xml">
+</head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon.png" alt="logo"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/xlydsg" target="_blank" class="nav-list-link">GITHUB</a></li></ul></header><main class="container"><div class="post"><article class="post-block"><h1 class="post-title">树莓派做的远程服务器监控</h1><div class="post-info">Apr 30, 2020</div><div class="post-content"><p>&emsp;&emsp;放在学校的台式机突然就连不上了，救是没法救了，刚好手头有一个在做软路由的树莓派，拿来开个刀试着做一个服务器监控/控制设备用。用到的工具主要有：树莓派4B，USB-HDMI采集卡，串口转USB-HID模块。具体工程见文末。<br>&emsp;&emsp;当然市场上有类似的东西：向日葵控控a2，如果有钱直接买那肯定是最佳解决方案。而且如果对性能要求不高的话，可以试试玩玩FriendlyElec的ZeroPi，千兆口+USB2.0+串口，刚刚好不多不少。</p>
+<a id="more"></a>
+
+<h2 id="搭架构"><a href="#搭架构" class="headerlink" title="搭架构"></a>搭架构</h2><p>&emsp;&emsp;树莓派连接网络做处理，装上raspbian之后，只需要实现远程连接、音视频采集和控制输出就行。网络用板载2.4GWiFi连接就行，如果有需求也可以通过4G/5G联网。</p>
+<h4 id="远程连接"><a href="#远程连接" class="headerlink" title="远程连接"></a>远程连接</h4><p>&emsp;&emsp;一方面是实时操控，写轮子是不可能自己写的，这辈子都不可能自己写轮子。刚好常用的<a href="https://www.teamviewer.com/en/download/linux/" target="_blank" rel="noopener">TeamViewer</a>有Raspbian直接可用的Host端，问题解决了。另外Anydesk也有树莓派的Host端，可以作备选。</p>
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/teamviewer.webp" alt="TV效果"></p>
+<p>&emsp;&emsp;另一方面是常备监控，用直播推流就行，需要看的时候连上直播间看一眼，找了一圈刚好腾讯云有<a href="https://cloud.tencent.com/product/css" target="_blank" rel="noopener">直播推流服务</a>，在树莓派端抓取视频然后推流就行，还有20GB赠送流量。同样的不可能自己造轮子，找了一圈，开源的<a href="https://obsproject.com/" target="_blank" rel="noopener">Obs Studio</a>刚刚好。</p>
+<p>&emsp;&emsp;obs编译安装好就可以推流了。由于性能和内存限制，如果要整清晰的，可能需要更多swap空间。但是我为了节省流量设定推流码率256kbps，帧率8FPS，好像没什么压力。</p>
+<p>&emsp;&emsp;另外要注意的是在Pi4b上的Raspbian Buster调用OpenGL的时候似乎会尝试Version 1.4，然后就会报错。解决方法是强制Version 3.3运行，可以写个脚本做快速启动。如果想要obs推流高清一点，建议用4g内存版本的树莓派并再开个4g的swap。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#! &#x2F;bin&#x2F;bash</span><br><span class="line"></span><br><span class="line">MESA_GL_VERSION_OVERRIDE&#x3D;3.3 obs</span><br><span class="line"></span><br><span class="line">exit 0</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/error.webp" alt="报错"></p>
+<center>报错</center>
+
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obs1.webp" alt="直播效果"></p>
+<center>运行投屏测试</center>
+
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obs2.webp" alt="直播效果"></p>
+<center>拉流下来看到的效果</center>
+
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obs3.webp" alt="直播效果"></p>
+<center>拉流下来看到的效果</center>
+
+<h4 id="音视频采集"><a href="#音视频采集" class="headerlink" title="音视频采集"></a>音视频采集</h4><p>&emsp;&emsp;掏出万能的淘宝闲鱼拼多多，找最便宜的HDMI-USB采集卡，咸鱼62包邮还加一条1.5M的HDMI线，还要什么自行车！垃圾佬走起！虽然上手质量不怎么样，实测输出由于USB2.0的带宽瓶颈，最多720p，30fps，颜色也有很大损失，不过能用就行。</p>
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/obsCap.webp" alt="obs效果"></p>
+<center>用obs捕捉到的视频流（有声音）</center>
+
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/pyCap.webp" alt="python效果"></p>
+<center>用opencv捕捉到的视频流</center>
+
+
+<h4 id="控制"><a href="#控制" class="headerlink" title="控制"></a>控制</h4><p>&emsp;&emsp;既然要远程控制的话，用obs就不太好用了。用python写一个简单的抓取视频流+映射鼠标键盘的功能不难，这里用串口连接到CH9329（频率不高，瞎画能连起来就行），插进电脑直接识别USB-HID设备。采集卡的视频用opencv-python取出来，用pygame写的gui放出来。在pygame里面通过键盘和鼠标相关事件控制CH9329实现键鼠的映射。最终效果，中规中矩。</p>
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/pcb.webp" alt="pcb"><br><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/pcbsch.webp" alt="pcbsch"></p>
+<center>瞎画的，用的时候才发现控制口内部自带上拉电阻，那几个跳线点不用接，要是用起来有问题可以改一改退耦电容的位置，用母排针可以直接插在树莓派io上，不想做直接淘宝买模块就行</center>
+
+<p><img src="https://xlydsg-1255720226.cos.ap-chengdu.myqcloud.com/RemoteControlRaspbian/tvconnect-1.webp" alt="pcbsch"></p>
+<center>套娃（win10套TV套Raspbian套win10）</center>
+<center>不过控制方面还没加组合键的代码，有时间再弄吧</center>
+
+<h2 id="实际测试"><a href="#实际测试" class="headerlink" title="实际测试"></a>实际测试</h2><p>&emsp;&emsp;等开学，现在只能祈祷台式机别被老鼠糟蹋了。<br>&emsp;&emsp;[202006更新]原来电脑跪了的原因是便宜货内存走的时候设定了超频忘记降下来了。</p>
+<h2 id="书签"><a href="#书签" class="headerlink" title="书签"></a>书签</h2><blockquote>
+<p>Obs安装方法出处<br><a href="https://obsproject.com/forum/threads/obs-raspberry-pi-build-instructions.115739/" target="_blank" rel="noopener">OBS Raspberry Pi Build Instructions</a><br><a href="https://obsproject.com/forum/threads/failed-to-initialize-video-your-gpu-may-not-be-supported-or-you-graphics-driver-may-need-to-be-updated.115872/#post-437101" target="_blank" rel="noopener">graphics driver problem</a></p>
+</blockquote>
+<blockquote>
+<p>pygame相关资料<br><a href="https://www.pygame.org/docs" target="_blank" rel="noopener">pygame documentation</a><br><a href="https://riptutorial.com/pygame/example/18046/event-loop" target="_blank" rel="noopener">Event loop tutorial</a></p>
+</blockquote>
+<blockquote>
+<p>HID转串口的片子<br><a href="http://www.wch.cn/products/CH9329.html?from=list" target="_blank" rel="noopener">CH9329</a></p>
+</blockquote>
+<blockquote>
+<p>代码的Github仓库<br><a href="https://github.com/xlydsg/RaspberryPiRemoteControl" target="_blank" rel="noopener">RaspberryPiRemoteControl</a></p>
+</blockquote>
+</div></article></div></main><footer><div class="paginator"><a href="/2020/12/19/2020%E7%85%A7%E7%89%87%E6%95%B4%E7%90%86/" class="prev">PREV</a><a href="/2020/03/08/SparaxisElegansWhite/" class="next">NEXT</a></div><div id="disqus_thread"></div><script>var disqus_shortname = 'xlydsg';
+var disqus_identifier = '2020/04/30/树莓派做的远程服务器监控/';
+var disqus_title = '树莓派做的远程服务器监控';
+var disqus_url = 'http://yoursite.com/2020/04/30/树莓派做的远程服务器监控/';
+(function() {
+    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+})();</script><script id="dsq-count-scr" src="//xlydsg.disqus.com/count.js" async></script><div class="copyright"><p>© 2019 - 2025 <a href="http://yoursite.com">xlydsginwonderland</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
